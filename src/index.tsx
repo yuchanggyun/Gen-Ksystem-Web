@@ -83,11 +83,11 @@ app.get('/', (c) => {
             white-space: nowrap;
         }
         
-        /* Grid Container - 5개 그리드 레이아웃 */
+        /* Grid Container - 4개 그리드 레이아웃 */
         .grid-container {
             flex: 1;
             display: grid;
-            grid-template-columns: 200px 1fr 1fr 250px;
+            grid-template-columns: 200px 1fr 1fr 280px;
             grid-template-rows: 1fr 1fr;
             gap: 10px;
             padding: 10px;
@@ -100,33 +100,27 @@ app.get('/', (c) => {
             grid-row: 1 / 3;
         }
         
-        /* Grid 2: 생산계획 데이터 (중앙 상단) */
+        /* Grid 2: 생산계획+공정흐름 통합 (중앙 좌측 전체) */
         .grid-production-plan {
             grid-column: 2;
-            grid-row: 1;
+            grid-row: 1 / 3;
         }
         
-        /* Grid 3: 공정작업 데이터 (중앙 하단) */
+        /* Grid 3: 공정작업 (중앙 우측 전체) */
         .grid-process-work {
-            grid-column: 2;
-            grid-row: 2;
-        }
-        
-        /* Grid 4: 공정흐름 (우측 상단) */
-        .grid-process-flow {
             grid-column: 3;
-            grid-row: 1;
+            grid-row: 1 / 3;
         }
         
-        /* Grid 5: 작업자 선택 (우측 상단) */
+        /* Grid 4: 작업자 선택 (우측 상단) */
         .grid-worker {
             grid-column: 4;
             grid-row: 1;
         }
         
-        /* Grid 6: 작업진행정보 (우측 하단) */
+        /* Grid 5: 작업진행정보 (우측 하단) */
         .grid-work-progress {
-            grid-column: 3 / 5;
+            grid-column: 4;
             grid-row: 2;
         }
         
@@ -319,7 +313,7 @@ app.get('/', (c) => {
                 </div>
             </div>
             
-            <!-- Grid Container (5개 그리드) -->
+            <!-- Grid Container (4개 그리드) -->
             <div class="grid-container">
                 <!-- Grid 1: 작업구역 -->
                 <div class="grid-box grid-work-area">
@@ -346,10 +340,10 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 
-                <!-- Grid 2: 생산계획 데이터 -->
+                <!-- Grid 2: 생산계획 + 공정흐름 통합 -->
                 <div class="grid-box grid-production-plan">
                     <div class="grid-header">
-                        <i class="fas fa-calendar-alt"></i> 생산계획
+                        <i class="fas fa-calendar-alt"></i> 생산계획 / 공정흐름
                     </div>
                     <div class="grid-body">
                         <table>
@@ -359,12 +353,13 @@ app.get('/', (c) => {
                                     <th>호기</th>
                                     <th>계획일</th>
                                     <th>수량</th>
+                                    <th>공정진행</th>
                                     <th>상태</th>
                                 </tr>
                             </thead>
                             <tbody id="productionPlanTable">
                                 <tr>
-                                    <td colspan="5" class="empty-state">
+                                    <td colspan="6" class="empty-state">
                                         작업구역을 선택하세요
                                     </td>
                                 </tr>
@@ -373,7 +368,7 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 
-                <!-- Grid 3: 공정작업 데이터 -->
+                <!-- Grid 3: 공정작업 -->
                 <div class="grid-box grid-process-work">
                     <div class="grid-header">
                         <i class="fas fa-tasks"></i> 공정작업
@@ -399,32 +394,7 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 
-                <!-- Grid 4: 공정흐름 -->
-                <div class="grid-box grid-process-flow">
-                    <div class="grid-header">
-                        <i class="fas fa-project-diagram"></i> 공정흐름
-                    </div>
-                    <div class="grid-body">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>순서</th>
-                                    <th>공정명</th>
-                                    <th>진행상태</th>
-                                </tr>
-                            </thead>
-                            <tbody id="processFlowTable">
-                                <tr>
-                                    <td colspan="3" class="empty-state">
-                                        생산계획을 선택하세요
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- Grid 5: 작업자 선택 -->
+                <!-- Grid 4: 작업자 선택 -->
                 <div class="grid-box grid-worker">
                     <div class="grid-header">
                         <i class="fas fa-user-hard-hat"></i> 작업자
@@ -449,7 +419,7 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 
-                <!-- Grid 6: 작업진행정보 -->
+                <!-- Grid 5: 작업진행정보 -->
                 <div class="grid-box grid-work-progress">
                     <div class="grid-header">
                         <i class="fas fa-chart-line"></i> 작업진행정보

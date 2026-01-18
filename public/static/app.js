@@ -238,7 +238,6 @@ async function selectWorkArea(code) {
     
     // Clear other grids
     clearGrid('processWorkTable', 4, '생산계획을 선택하세요');
-    clearGrid('processFlowTable', 3, '생산계획을 선택하세요');
     clearGrid('workProgressTable', 7, '공정작업을 선택하세요');
     
     updateButtonStates();
@@ -265,9 +264,9 @@ async function loadProductionPlans(workAreaCode) {
         console.error('Error loading production plans:', error);
         // Use mock data
         renderProductionPlans([
-            { id: 1, model: 'CP619Z1', machine: '001', planDate: '2026-01-18', quantity: 100, status: 'running' },
-            { id: 2, model: 'CP865921', machine: '002', planDate: '2026-01-18', quantity: 150, status: 'waiting' },
-            { id: 3, model: 'CP823921', machine: '003', planDate: '2026-01-18', quantity: 120, status: 'completed' }
+            { id: 1, model: 'CP619Z1', machine: '001', planDate: '2026-01-18', quantity: 100, processProgress: '3/5', status: 'running' },
+            { id: 2, model: 'CP865921', machine: '002', planDate: '2026-01-18', quantity: 150, processProgress: '1/5', status: 'waiting' },
+            { id: 3, model: 'CP823921', machine: '003', planDate: '2026-01-18', quantity: 120, processProgress: '5/5', status: 'completed' }
         ]);
     }
 }
@@ -279,19 +278,25 @@ function renderProductionPlans(data) {
     const tbody = document.getElementById('productionPlanTable');
     
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">데이터가 없습니다</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">데이터가 없습니다</td></tr>';
         return;
     }
     
-    tbody.innerHTML = data.map(item => `
+    tbody.innerHTML = data.map(item => {
+        // 공정진행 정보 생성 (예: 3/5 완료)
+        const processProgress = item.processProgress || '0/0';
+        
+        return `
         <tr class="clickable status-${item.status}" onclick="selectProductionPlan(${item.id})">
             <td>${item.model}</td>
             <td>${item.machine}</td>
             <td>${item.planDate}</td>
             <td>${item.quantity}</td>
+            <td style="font-weight: 600; color: #3498db;">${processProgress}</td>
             <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 /**
@@ -304,11 +309,8 @@ async function selectProductionPlan(planId) {
     document.querySelectorAll('#productionPlanTable tr').forEach(tr => tr.classList.remove('selected'));
     event.target.closest('tr').classList.add('selected');
     
-    // Load process works and process flow
-    await Promise.all([
-        loadProcessWorks(planId),
-        loadProcessFlow(planId)
-    ]);
+    // Load process works
+    await loadProcessWorks(planId);
     
     // Clear work progress
     clearGrid('workProgressTable', 7, '공정작업을 선택하세요');
@@ -356,51 +358,6 @@ function renderProcessWorks(data) {
             <td>${item.code}</td>
             <td>${item.name}</td>
             <td>${item.sequence}</td>
-            <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
-        </tr>
-    `).join('');
-}
-
-/**
- * Load process flow
- */
-async function loadProcessFlow(planId) {
-    try {
-        const response = await axios.get(`${API_BASE}/process-flow/list`, {
-            params: { planId }
-        });
-        
-        if (response.data.success) {
-            renderProcessFlow(response.data.data);
-        }
-    } catch (error) {
-        console.error('Error loading process flow:', error);
-        // Use mock data
-        renderProcessFlow([
-            { sequence: 1, name: '전처리', status: 'completed' },
-            { sequence: 2, name: '가공', status: 'running' },
-            { sequence: 3, name: '조립', status: 'waiting' },
-            { sequence: 4, name: '검사', status: 'waiting' },
-            { sequence: 5, name: '포장', status: 'waiting' }
-        ]);
-    }
-}
-
-/**
- * Render process flow
- */
-function renderProcessFlow(data) {
-    const tbody = document.getElementById('processFlowTable');
-    
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="empty-state">데이터가 없습니다</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = data.map(item => `
-        <tr class="status-${item.status}">
-            <td>${item.sequence}</td>
-            <td>${item.name}</td>
             <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
         </tr>
     `).join('');
@@ -661,9 +618,8 @@ function resetAllGrids() {
     selectedWorkers = [];
     
     clearGrid('workAreaTable', 2, '전체작업구역 조회를 클릭하세요');
-    clearGrid('productionPlanTable', 5, '작업구역을 선택하세요');
+    clearGrid('productionPlanTable', 6, '작업구역을 선택하세요');
     clearGrid('processWorkTable', 4, '생산계획을 선택하세요');
-    clearGrid('processFlowTable', 3, '생산계획을 선택하세요');
     clearGrid('workProgressTable', 7, '공정작업을 선택하세요');
     
     updateButtonStates();
