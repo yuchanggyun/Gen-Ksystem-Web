@@ -28,6 +28,19 @@
   - PM2 기반 개발 서버 구성
   - Vite 5.x 빌드 시스템
 
+✅ **초기 로딩 메소드 (NEW!)**
+  - **API**: `/api/initial-load`
+  - **SP 기반**: `sp_POP_GetInitialData`
+  - **반환 데이터**:
+    - **DataBlock1**: 작업구역 + 생산계획 데이터 (조회범위, 필터조건, JOIN구조)
+    - **DataBlock2**: 작업자 데이터 (좌우 분할 알고리즘)
+  - **실행 흐름**:
+    1. FactUnit 조회
+    2. DataBlock1 생성 (5개 항목)
+    3. DataBlock2 생성 (7단계 분할)
+    4. 결과 반환
+  - **프론트엔드 통합**: `loadInitialData()` 함수로 초기화
+
 ✅ **상단 조회조건부**
   - 전체작업구역 조회 버튼
   - 생산사업장 선택 (필수)
@@ -64,9 +77,10 @@
   - **공정이상해제** 버튼: 공정작업 선택 시 활성화
 
 ✅ **API 엔드포인트 구조**
-  - 필터: `/api/filter/{plants|models|workcenters|processes}`
-  - 데이터: `/api/{work-area|production-plan|process-work|worker|work-progress}/list`
-  - 작업 제어: `/api/work/{start|end|resolve}`
+  - **초기 로딩**: `/api/initial-load` (NEW! - SP 기반 초기 데이터)
+  - **필터**: `/api/filter/{plants|models|workcenters|processes}`
+  - **데이터**: `/api/{work-area|production-plan|process-work|worker|work-progress}/list`
+  - **작업 제어**: `/api/work/{start|end|resolve}`
 
 ✅ **프론트엔드 기능**
   - 실시간 시계 표시
@@ -139,6 +153,19 @@ npm run deploy:prod
 ```
 
 ## SP 매핑 목록 (실제 SP 이름으로 변경 필요)
+
+### 초기 로딩 (NEW!)
+- `sp_POP_GetInitialData` - 화면 초기 로딩 메소드
+  - **파라미터**: @FactUnit, @DeptSeq, @PlantCode
+  - **반환**: 
+    - **Recordset 1 (DataBlock1)**: 작업구역 + 생산계획 데이터
+    - **Recordset 2 (DataBlock2)**: 작업자 데이터 (좌우 분할)
+  - **로직**:
+    - FactUnit 자동 설정
+    - 조회범위, 필터조건, JOIN구조 처리
+    - 좌우 분할 알고리즘 적용
+  - **비즈니스 규칙**: BR-01 ~ BR-07
+  - **참조 테이블**: 10개 (명세 문서 참조)
 
 ### 필터 관련
 - `sp_GetPlantList` - 생산사업장 목록

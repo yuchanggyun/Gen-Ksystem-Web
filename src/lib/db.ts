@@ -57,6 +57,7 @@ export async function executeSP<T = any>(
       success: true,
       data: result.recordset as T,
       recordset: result.recordset,
+      recordsets: result.recordsets,  // Added for multiple recordsets support
       returnValue: result.returnValue,
     };
   } catch (error) {

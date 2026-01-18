@@ -20,12 +20,60 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize filters
     initFilters();
     
-    // Load initial data
-    loadWorkers();
+    // Call initial load API (replaces separate loadWorkers)
+    loadInitialData();
     
     // Set default dates
     setDefaultDates();
 });
+
+/**
+ * Initial data load - calls SP that returns DataBlock1 and DataBlock2
+ * Based on POP 화면 초기 로딩 메소드
+ */
+async function loadInitialData() {
+    try {
+        console.log('Loading initial data from SP...');
+        
+        // Get current filter values
+        const factUnit = document.getElementById('plantSelect')?.value || '';
+        const deptSeq = 0;  // Default dept
+        const plantCode = factUnit;
+        
+        const response = await axios.get(`${API_BASE}/initial-load`, {
+            params: { factUnit, deptSeq, plantCode }
+        });
+        
+        if (response.data.success) {
+            const { dataBlock1, dataBlock2 } = response.data.data;
+            
+            // DataBlock1: Work areas and production plans
+            if (dataBlock1 && dataBlock1.length > 0) {
+                console.log('DataBlock1 loaded:', dataBlock1.length, 'rows');
+                // TODO: Process DataBlock1 - work areas and production plans
+            }
+            
+            // DataBlock2: Workers (left/right split)
+            if (dataBlock2 && dataBlock2.length > 0) {
+                console.log('DataBlock2 loaded:', dataBlock2.length, 'workers');
+                renderWorkers(dataBlock2);
+            } else {
+                // Fallback to separate API if SP not available
+                loadWorkers();
+            }
+            
+            console.log('Initial data loaded successfully');
+        } else {
+            console.error('Initial load failed:', response.data.error);
+            // Fallback to separate API calls
+            loadWorkers();
+        }
+    } catch (error) {
+        console.error('Error in initial load:', error);
+        // Fallback to separate API calls
+        loadWorkers();
+    }
+}
 
 /**
  * Update clock display

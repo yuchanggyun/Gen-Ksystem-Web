@@ -17,6 +17,7 @@ export interface SPResponse<T = any> {
   data?: T;
   error?: string;
   recordset?: T[];
+  recordsets?: T[][];  // Added for multiple recordsets support
   returnValue?: number;
 }
 

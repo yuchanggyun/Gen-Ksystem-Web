@@ -7,6 +7,62 @@ const api = new Hono();
 // Enable CORS for API routes
 api.use('/*', cors());
 
+// ==================== Initial Load API ====================
+
+/**
+ * GET /api/initial-load
+ * Initial screen loading - returns both DataBlock1 and DataBlock2
+ * 
+ * DataBlock1: Work area + Production plan data
+ * DataBlock2: Worker data (left/right split algorithm)
+ * 
+ * Based on SP logic:
+ * 1. FactUnit 조회
+ * 2. DataBlock1 생성 (조회범위, 필터조건, JOIN구조)
+ * 3. DataBlock2 생성 (부서 작업자 → 좌우 분할)
+ * 4. 결과 반환
+ */
+api.get('/initial-load', async (c) => {
+  try {
+    const { factUnit, deptSeq, plantCode } = c.req.query();
+    
+    // Execute main SP for initial load
+    const result = await executeSP(
+      'sp_POP_GetInitialData',
+      {
+        FactUnit: factUnit || '',
+        DeptSeq: deptSeq || 0,
+        PlantCode: plantCode || ''
+      },
+      c.env
+    );
+    
+    if (!result.success) {
+      return c.json({ error: result.error }, 500);
+    }
+    
+    // SP returns multiple recordsets:
+    // recordsets[0] = DataBlock1 (work areas + production plans)
+    // recordsets[1] = DataBlock2 (workers with left/right split)
+    const recordsets = result.recordsets || [];
+    
+    return c.json({
+      success: true,
+      data: {
+        dataBlock1: recordsets[0] || [],  // Work area + Production plan
+        dataBlock2: recordsets[1] || []   // Workers (left/right split)
+      },
+      message: '초기 데이터 로딩 완료'
+    });
+  } catch (error) {
+    console.error('Error in /api/initial-load:', error);
+    return c.json({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: '초기 데이터 로딩 실패'
+    }, 500);
+  }
+});
+
 // ==================== Filter APIs ====================
 
 /**
