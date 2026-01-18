@@ -27,28 +27,50 @@ app.get('/', (c) => {
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Malgun Gothic', sans-serif; overflow: hidden; }
+        body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; overflow: hidden; background: #f5f7fa; }
         
         /* Layout */
-        .app-container { display: flex; height: 100vh; }
+        .app-container { display: flex; height: 100vh; background: #f5f7fa; }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         
         /* Header */
         .header {
-            background: white;
-            padding: 12px 20px;
-            border-bottom: 2px solid #e0e0e0;
+            background: #3d4f5c;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        .header h1 {
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .header-stats {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .stat-badge {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stat-badge i { font-size: 10px; }
+        .stat-value { font-weight: 600; color: #4fc3f7; }
         
         /* Filter Section */
         .filter-section {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-bottom: 2px solid #e0e0e0;
+            background: white;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e0e0e0;
             flex-shrink: 0;
         }
         .filter-row {
@@ -64,9 +86,9 @@ app.get('/', (c) => {
             gap: 8px;
         }
         .filter-item label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            color: #2c3e50;
+            color: #546e7a;
             white-space: nowrap;
         }
         
@@ -76,9 +98,10 @@ app.get('/', (c) => {
             display: grid;
             grid-template-columns: 200px 1fr 1fr 280px;
             grid-template-rows: 1fr 1fr;
-            gap: 10px;
-            padding: 10px;
+            gap: 8px;
+            padding: 8px;
             overflow: hidden;
+            background: #f5f7fa;
         }
         
         /* Grid 1: 작업구역 (좌측 전체) */
@@ -114,21 +137,42 @@ app.get('/', (c) => {
         /* Grid Box Styling */
         .grid-box {
             background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 1px solid #e0e6ed;
+            border-radius: 6px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
         .grid-header {
-            background: #3498db;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 8px 12px;
+            padding: 10px 14px;
             font-weight: 600;
             font-size: 13px;
-            border-bottom: 2px solid #2980b9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             flex-shrink: 0;
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+        .grid-header i { font-size: 14px; opacity: 0.9; }
+        
+        /* 그리드별 헤더 색상 */
+        .grid-work-area .grid-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .grid-production-plan .grid-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .grid-process-work .grid-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .grid-worker .grid-header {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        .grid-work-progress .grid-header {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         }
         .grid-body {
             flex: 1;
@@ -142,68 +186,80 @@ app.get('/', (c) => {
             font-size: 12px;
         }
         th {
-            background: #ecf0f1;
-            color: #2c3e50;
-            padding: 8px;
+            background: #f8f9fa;
+            color: #546e7a;
+            padding: 10px 8px;
             text-align: left;
             font-weight: 600;
-            border-bottom: 2px solid #bdc3c7;
+            border-bottom: 2px solid #e0e6ed;
             position: sticky;
             top: 0;
             z-index: 5;
+            font-size: 11px;
         }
         td {
-            padding: 6px 8px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #37474f;
         }
-        tr:hover { background: #f8f9fa; }
-        tr.selected { background: #d4e9ff; }
-        tr.status-running { background: #d5f4e6; }
-        tr.status-waiting { background: #fff3cd; }
-        tr.status-error { background: #f8d7da; }
-        tr.clickable { cursor: pointer; }
+        tr:hover { background: #f8fafb; }
+        tr.selected { background: #e3f2fd; border-left: 3px solid #2196f3; }
+        tr.status-running { background: #e8f5e9; }
+        tr.status-waiting { background: #fff8e1; }
+        tr.status-error { background: #ffebee; }
+        tr.status-completed { background: #e3f2fd; }
+        tr.clickable { cursor: pointer; transition: all 0.2s; }
         
         /* Buttons */
         .btn-group {
             background: white;
             padding: 12px 20px;
-            border-top: 2px solid #e0e0e0;
+            border-top: 1px solid #e0e6ed;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
         }
         .btn {
-            padding: 10px 20px;
+            padding: 10px 24px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             font-size: 13px;
-            transition: all 0.2s;
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            box-shadow: none;
         }
-        .btn-primary { background: #3498db; color: white; }
-        .btn-primary:hover:not(:disabled) { background: #2980b9; }
-        .btn-success { background: #2ecc71; color: white; }
-        .btn-success:hover:not(:disabled) { background: #27ae60; }
-        .btn-danger { background: #e74c3c; color: white; }
-        .btn-danger:hover:not(:disabled) { background: #c0392b; }
-        .btn-warning { background: #f39c12; color: white; }
-        .btn-warning:hover:not(:disabled) { background: #e67e22; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
+        .btn-success { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+        .btn-success:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(67, 233, 123, 0.4); }
+        .btn-danger { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+        .btn-danger:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(250, 112, 154, 0.4); }
+        .btn-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .btn-warning:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(240, 147, 251, 0.4); }
         
         /* Form Elements */
         select, input[type="text"], input[type="date"] {
-            padding: 6px 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 13px;
+            padding: 6px 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 12px;
             background: white;
+            transition: all 0.2s;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         select { min-width: 120px; }
         input[type="date"] { width: 130px; }
@@ -212,22 +268,22 @@ app.get('/', (c) => {
         .empty-state {
             text-align: center;
             padding: 30px 20px;
-            color: #7f8c8d;
-            font-size: 13px;
+            color: #90a4ae;
+            font-size: 12px;
         }
         
         /* Status Badge */
         .status-badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
+            padding: 3px 10px;
+            border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
         }
-        .status-badge.running { background: #d5f4e6; color: #27ae60; }
-        .status-badge.waiting { background: #fff3cd; color: #f39c12; }
-        .status-badge.completed { background: #d4e9ff; color: #3498db; }
-        .status-badge.error { background: #f8d7da; color: #e74c3c; }
+        .status-badge.running { background: #c8e6c9; color: #2e7d32; }
+        .status-badge.waiting { background: #fff9c4; color: #f57f17; }
+        .status-badge.completed { background: #bbdefb; color: #1565c0; }
+        .status-badge.error { background: #ffcdd2; color: #c62828; }
     </style>
 </head>
 <body>
@@ -236,13 +292,27 @@ app.get('/', (c) => {
         <div class="main-content">
             <!-- Header -->
             <div class="header">
-                <h1 style="font-size: 18px; color: #2c3e50; font-weight: 600;">
-                    <i class="fas fa-clipboard-list"></i>
-                    CP_DP 트라이얼파일조리
+                <h1>
+                    <i class="fas fa-industry"></i>
+                    CP 조회 화면
                 </h1>
-                <div style="color: #7f8c8d; font-size: 13px;">
-                    <i class="far fa-clock"></i>
-                    <span id="current-time"></span>
+                <div class="header-stats">
+                    <div class="stat-badge">
+                        <i class="fas fa-leaf"></i>
+                        환경 관리 <span class="stat-value">0</span>
+                    </div>
+                    <div class="stat-badge">
+                        <i class="fas fa-chart-line"></i>
+                        가동률 <span class="stat-value">0.0%</span>
+                    </div>
+                    <div class="stat-badge">
+                        <i class="fas fa-check-circle"></i>
+                        확인건 <span class="stat-value">0</span>
+                    </div>
+                    <div style="color: white; font-size: 12px;">
+                        <i class="far fa-clock"></i>
+                        <span id="current-time"></span>
+                    </div>
                 </div>
             </div>
             
