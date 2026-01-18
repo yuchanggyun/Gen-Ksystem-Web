@@ -17,9 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateClock();
     setInterval(updateClock, 1000);
     
-    // Initialize navigation
-    initNavigation();
-    
     // Initialize filters
     initFilters();
     
@@ -47,52 +44,6 @@ function updateClock() {
     if (clockEl) {
         clockEl.textContent = timeString;
     }
-}
-
-/**
- * Initialize navigation menu
- */
-function initNavigation() {
-    const navItems = [
-        { icon: 'fas fa-clipboard-list', text: 'CP_DP 트라이얼파일조리', active: true },
-        { icon: 'fas fa-cogs', text: 'CP_DP 10단계' },
-        { icon: 'fas fa-tools', text: 'CP_DP 4 5 6차' },
-        { icon: 'fas fa-wrench', text: 'CP_DP 사상화' },
-        { icon: 'fas fa-box', text: 'CP_DP 메인조립' },
-        { icon: 'fas fa-paint-brush', text: 'CP_DP 사상내열' },
-        { icon: 'fas fa-flask', text: 'CP_DP 소결체' },
-        { icon: 'fas fa-chart-line', text: 'CP_DP 시작' },
-        { icon: 'fas fa-list', text: 'CP_DP 노점' },
-        { icon: 'fas fa-check-square', text: 'CP_DP 재작업' },
-        { icon: 'fas fa-file-alt', text: 'CP_DP 워가구' },
-        { icon: 'fas fa-database', text: 'CP_DP 마무리가공' },
-        { icon: 'fas fa-cube', text: 'CP_DP 포장 5 6차' }
-    ];
-    
-    const navMenu = document.getElementById('nav-menu');
-    navMenu.innerHTML = navItems.map(item => `
-        <div class="nav-item ${item.active ? 'active' : ''}" onclick="switchMenu('${item.text}')">
-            <i class="${item.icon}"></i> ${item.text}
-        </div>
-    `).join('');
-}
-
-/**
- * Switch menu
- */
-function switchMenu(menuName) {
-    console.log('Switching to menu:', menuName);
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    event.target.closest('.nav-item').classList.add('active');
-    
-    document.querySelector('.header h1').innerHTML = `
-        <i class="fas fa-clipboard-list"></i> ${menuName}
-    `;
-    
-    // Reset all grids
-    resetAllGrids();
 }
 
 /**

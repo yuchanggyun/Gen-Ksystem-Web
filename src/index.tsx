@@ -31,20 +31,7 @@ app.get('/', (c) => {
         
         /* Layout */
         .app-container { display: flex; height: 100vh; }
-        .sidebar { width: 220px; background: #2c3e50; color: white; overflow-y: auto; flex-shrink: 0; }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Sidebar Navigation */
-        .nav-item {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-left: 3px solid transparent;
-            transition: all 0.2s;
-            font-size: 13px;
-        }
-        .nav-item:hover { background: #34495e; border-left-color: #3498db; }
-        .nav-item.active { background: #34495e; border-left-color: #3498db; }
-        .nav-item i { margin-right: 8px; width: 16px; }
         
         /* Header */
         .header {
@@ -245,14 +232,6 @@ app.get('/', (c) => {
 </head>
 <body>
     <div class="app-container">
-        <!-- Left Sidebar -->
-        <div class="sidebar">
-            <div style="padding: 16px; background: #1a252f; font-size: 16px; font-weight: 600; border-bottom: 1px solid #34495e;">
-                <i class="fas fa-industry"></i> 생산관리
-            </div>
-            <div id="nav-menu"></div>
-        </div>
-        
         <!-- Main Content -->
         <div class="main-content">
             <!-- Header -->
