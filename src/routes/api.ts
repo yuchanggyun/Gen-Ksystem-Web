@@ -156,6 +156,73 @@ api.get('/filter/processes', async (c) => {
 // ==================== Work Area APIs ====================
 
 /**
+ * GET /api/work-area/all
+ * Get complete work area list (전체작업구역 조회)
+ * 
+ * Stored Procedure: evdm_SPDPOPDailyWorkProcLocAllQuery
+ * 
+ * Returns hierarchical data:
+ * - Level 1: FactUnit (생산사업장)
+ * - Level 2: ShopCode (샵장/위치)
+ * - Level 3: ProcLocSeq (작업구역)
+ * 
+ * Parameters:
+ * - factUnit: 생산사업장 코드 (required)
+ * - shopCode: 샵장 코드 (optional, 0=전체)
+ * 
+ * Output (DataBlock1):
+ * - FactUnit, FactUnitName
+ * - ShopCode, Shop
+ * - ProcLocSeq, ProcLocName
+ */
+api.get('/work-area/all', async (c) => {
+  try {
+    const { factUnit, shopCode } = c.req.query();
+    
+    if (!factUnit) {
+      return c.json({ error: 'FactUnit is required' }, 400);
+    }
+    
+    // Prepare XML request for SP
+    const xmlDocument = `
+      <ROOT>
+        <DataBlock1>
+          <FactUnit>${factUnit}</FactUnit>
+          <ShopCode>${shopCode || '0'}</ShopCode>
+        </DataBlock1>
+      </ROOT>
+    `;
+    
+    const result = await executeSP(
+      'evdm_SPDPOPDailyWorkProcLocAllQuery',
+      {
+        xmlDocument: xmlDocument,
+        CompanySeq: 1,
+        LanguageSeq: 1,
+        UserSeq: 0,
+        xmlFlags: 0
+      },
+      c.env
+    );
+    
+    if (!result.success) {
+      return c.json({ error: result.error }, 500);
+    }
+    
+    // Return hierarchical structure
+    // DataBlock1: FactUnit → ShopCode → ProcLocSeq
+    return c.json({
+      success: true,
+      data: result.recordset || [],
+      message: '전체 작업구역 조회 완료'
+    });
+  } catch (error) {
+    console.error('Error in /api/work-area/all:', error);
+    return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+  }
+});
+
+/**
  * GET /api/work-area/list
  * Get work area list
  */

@@ -28,18 +28,29 @@
   - PM2 기반 개발 서버 구성
   - Vite 5.x 빌드 시스템
 
-✅ **초기 로딩 메소드 (NEW!)**
-  - **API**: `/api/initial-load`
-  - **SP 기반**: `sp_POP_GetInitialData`
-  - **반환 데이터**:
-    - **DataBlock1**: 작업구역 + 생산계획 데이터 (조회범위, 필터조건, JOIN구조)
-    - **DataBlock2**: 작업자 데이터 (좌우 분할 알고리즘)
-  - **실행 흐름**:
-    1. FactUnit 조회
-    2. DataBlock1 생성 (5개 항목)
-    3. DataBlock2 생성 (7단계 분할)
-    4. 결과 반환
-  - **프론트엔드 통합**: `loadInitialData()` 함수로 초기화
+✅ **초기 로딩 메소드**
+  - **API 1**: `/api/initial-load`
+    - **SP**: `sp_POP_GetInitialData`
+    - **용도**: 화면 초기 로딩시 작업구역 + 작업자 데이터 일괄 조회
+    - **반환**: DataBlock1 (작업구역/생산계획) + DataBlock2 (작업자)
+  
+  - **API 2**: `/api/work-area/all` (NEW!)
+    - **SP**: `evdm_SPDPOPDailyWorkProcLocAllQuery`
+    - **용도**: 전체작업구역 조회 버튼 클릭시 계층형 데이터 조회
+    - **파라미터**:
+      - `factUnit` (필수): 생산사업장 코드
+      - `shopCode` (선택, 0=전체): 샵장 코드
+    - **반환 구조** (3단계 계층):
+      ```
+      Level 1: FactUnit (생산사업장) → FactUnitName
+      Level 2: ShopCode (샵장/위치) → Shop
+      Level 3: ProcLocSeq (작업구역) → ProcLocName
+      ```
+    - **출력 필드**: FactUnit, FactUnitName, ShopCode, Shop, ProcLocSeq, ProcLocName
+    - **특징**: 
+      - DISTINCT 로직으로 중복 제거
+      - 계층 순서 정렬 (FactUnit → ShopCode → ProcLocSeq)
+      - XML 입력 구조 지원
 
 ✅ **상단 조회조건부**
   - 전체작업구역 조회 버튼
@@ -77,7 +88,9 @@
   - **공정이상해제** 버튼: 공정작업 선택 시 활성화
 
 ✅ **API 엔드포인트 구조**
-  - **초기 로딩**: `/api/initial-load` (NEW! - SP 기반 초기 데이터)
+  - **초기 로딩**: 
+    - `/api/initial-load` - SP 기반 초기 데이터 (작업구역 + 작업자)
+    - `/api/work-area/all` - 전체작업구역 조회 (계층형 3단계 구조)
   - **필터**: `/api/filter/{plants|models|workcenters|processes}`
   - **데이터**: `/api/{work-area|production-plan|process-work|worker|work-progress}/list`
   - **작업 제어**: `/api/work/{start|end|resolve}`
@@ -154,8 +167,9 @@ npm run deploy:prod
 
 ## SP 매핑 목록 (실제 SP 이름으로 변경 필요)
 
-### 초기 로딩 (NEW!)
-- `sp_POP_GetInitialData` - 화면 초기 로딩 메소드
+### 초기 로딩
+**1. 화면 초기 로딩 메소드**
+- `sp_POP_GetInitialData` - 초기 데이터 일괄 조회
   - **파라미터**: @FactUnit, @DeptSeq, @PlantCode
   - **반환**: 
     - **Recordset 1 (DataBlock1)**: 작업구역 + 생산계획 데이터
@@ -166,6 +180,39 @@ npm run deploy:prod
     - 좌우 분할 알고리즘 적용
   - **비즈니스 규칙**: BR-01 ~ BR-07
   - **참조 테이블**: 10개 (명세 문서 참조)
+
+**2. 전체작업구역 조회 (NEW!)**
+- `evdm_SPDPOPDailyWorkProcLocAllQuery` - 계층형 작업구역 마스터 조회
+  - **파라미터** (XML 기반):
+    - `@xmlDocument` (NVARCHAR(MAX), 필수): XML 요청 데이터
+    - `@CompanySeq` (INT, 기본값: 1): 회사 코드
+    - `@LanguageSeq` (INT, 기본값: 1): 언어 코드
+    - `@UserSeq` (INT, 기본값: 0): 사용자 코드
+    - `@xmlFlags` (INT, 기본값: 0): XML 파싱 옵션
+  - **XML 입력 구조**:
+    ```xml
+    <ROOT>
+      <DataBlock1>
+        <FactUnit>1001</FactUnit>
+        <ShopCode>0</ShopCode>  <!-- 0=전체 -->
+      </DataBlock1>
+    </ROOT>
+    ```
+  - **출력 필드** (DataBlock1):
+    - `FactUnit`, `FactUnitName` (생산사업장)
+    - `ShopCode`, `Shop` (샵장/위치)
+    - `ProcLocSeq`, `ProcLocName` (작업구역)
+  - **계층 구조**:
+    ```
+    Level 1: _TDAFactUnit (생산사업장)
+      ├─ Level 2: _TDAUMinor (샵장/위치)
+      │   └─ Level 3: EVDM_TPDPOPLocation (작업구역)
+    ```
+  - **특징**:
+    - DISTINCT 로직으로 중복 제거
+    - 계층 순서 정렬 (FactUnit → ShopCode → ProcLocSeq)
+    - ShopCode=0 입력 시 전체 샵장 및 작업구역 반환
+  - **문서 버전**: v1.0 (2025-04-08)
 
 ### 필터 관련
 - `sp_GetPlantList` - 생산사업장 목록

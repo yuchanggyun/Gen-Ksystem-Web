@@ -173,31 +173,76 @@ function setDefaultDates() {
 }
 
 /**
- * Load all work areas
+ * Load all work areas (전체작업구역 조회)
+ * Calls evdm_SPDPOPDailyWorkProcLocAllQuery SP
+ * 
+ * Returns hierarchical data:
+ * - FactUnit (생산사업장) → ShopCode (샵장) → ProcLocSeq (작업구역)
  */
 async function loadAllWorkAreas() {
-    const plant = document.getElementById('plantSelect').value;
+    const plantSelect = document.getElementById('plantSelect');
+    const factUnit = plantSelect?.value;
     
-    if (!plant) {
+    if (!factUnit) {
         alert('생산사업장을 선택해주세요.');
         return;
     }
     
     try {
-        const response = await axios.get(`${API_BASE}/work-area/list`, {
-            params: { plant }
+        console.log('Loading all work areas for FactUnit:', factUnit);
+        
+        // Call new API endpoint
+        const response = await axios.get(`${API_BASE}/work-area/all`, {
+            params: { 
+                factUnit: factUnit,
+                shopCode: 0  // 0 = 전체 샵장 조회
+            }
         });
         
         if (response.data.success) {
-            renderWorkAreas(response.data.data);
+            const data = response.data.data;
+            console.log('Loaded work areas:', data.length, 'items');
+            
+            // Render hierarchical data
+            // Data structure: FactUnit, FactUnitName, ShopCode, Shop, ProcLocSeq, ProcLocName
+            renderWorkAreas(data);
+        } else {
+            console.error('Failed to load work areas:', response.data.error);
+            alert('작업구역 조회에 실패했습니다: ' + response.data.error);
         }
     } catch (error) {
         console.error('Error loading work areas:', error);
-        // Use mock data
+        
+        // Use mock hierarchical data
+        console.log('Using mock data for work areas');
         renderWorkAreas([
-            { code: 'WA001', name: '작업구역1' },
-            { code: 'WA002', name: '작업구역2' },
-            { code: 'WA003', name: '작업구역3' },
+            { 
+                FactUnit: 1001, 
+                FactUnitName: '제1공장',
+                ShopCode: 2001,
+                Shop: '조립라인A',
+                ProcLocSeq: 3001, 
+                ProcLocName: '용접구역1' 
+            },
+            { 
+                FactUnit: 1001, 
+                FactUnitName: '제1공장',
+                ShopCode: 2001,
+                Shop: '조립라인A',
+                ProcLocSeq: 3002, 
+                ProcLocName: '도장구역1' 
+            },
+            { 
+                FactUnit: 1001, 
+                FactUnitName: '제1공장',
+                ShopCode: 2002,
+                Shop: '조립라인B',
+                ProcLocSeq: 3003, 
+                ProcLocName: '검사구역1' 
+            }
+        ]);
+    }
+}
             { code: 'WA004', name: '작업구역4' }
         ]);
     }
@@ -214,26 +259,47 @@ function renderWorkAreas(data) {
         return;
     }
     
-    tbody.innerHTML = data.map(item => `
-        <tr class="clickable" onclick="selectWorkArea('${item.code}')">
-            <td>${item.code}</td>
-            <td>${item.name}</td>
-        </tr>
-    `).join('');
+    // Support both old format (code/name) and new hierarchical format
+    tbody.innerHTML = data.map(item => {
+        // New hierarchical format: FactUnit, ShopCode, ProcLocSeq
+        if (item.ProcLocSeq && item.ProcLocName) {
+            return `
+                <tr class="clickable" onclick="selectWorkArea('${item.ProcLocSeq}', '${item.ShopCode}')">
+                    <td>
+                        <div class="text-xs text-gray-500">${item.Shop || ''}</div>
+                        <div class="font-medium">${item.ProcLocSeq}</div>
+                    </td>
+                    <td>
+                        <div class="font-medium">${item.ProcLocName}</div>
+                        <div class="text-xs text-gray-500">${item.FactUnitName || ''}</div>
+                    </td>
+                </tr>
+            `;
+        }
+        // Old format: code/name
+        else {
+            return `
+                <tr class="clickable" onclick="selectWorkArea('${item.code}')">
+                    <td>${item.code}</td>
+                    <td>${item.name}</td>
+                </tr>
+            `;
+        }
+    }).join('');
 }
 
 /**
  * Select work area
  */
-async function selectWorkArea(code) {
-    selectedWorkArea = code;
+async function selectWorkArea(procLocSeq, shopCode) {
+    selectedWorkArea = procLocSeq;
     
     // Highlight selected row
     document.querySelectorAll('#workAreaTable tr').forEach(tr => tr.classList.remove('selected'));
     event.target.closest('tr').classList.add('selected');
     
     // Load production plans for selected work area
-    await loadProductionPlans(code);
+    await loadProductionPlans(procLocSeq, shopCode);
     
     // Clear other grids
     clearGrid('processWorkTable', 4, '생산계획을 선택하세요');
