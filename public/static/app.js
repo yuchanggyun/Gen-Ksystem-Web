@@ -2,8 +2,10 @@
 const API_BASE = '/api';
 
 // Global state
-let currentData = [];
-let selectedItems = new Set();
+let selectedWorkArea = null;
+let selectedProductionPlan = null;
+let selectedProcessWork = null;
+let selectedWorkers = [];
 
 /**
  * Initialize application
@@ -18,21 +20,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize navigation
     initNavigation();
     
+    // Initialize filters
+    initFilters();
+    
     // Load initial data
-    loadWorkCenters();
-    loadData();
-    loadBenchStatus();
-    loadExceptionStatus();
+    loadWorkers();
     
-    // Setup event listeners
-    setupEventListeners();
-    
-    // Refresh data every 30 seconds
-    setInterval(() => {
-        loadData();
-        loadBenchStatus();
-        loadExceptionStatus();
-    }, 30000);
+    // Set default dates
+    setDefaultDates();
 });
 
 /**
@@ -87,278 +82,591 @@ function initNavigation() {
  */
 function switchMenu(menuName) {
     console.log('Switching to menu:', menuName);
-    // Remove active class from all items
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
     });
-    // Add active class to clicked item
     event.target.closest('.nav-item').classList.add('active');
     
-    // Update header title
     document.querySelector('.header h1').innerHTML = `
         <i class="fas fa-clipboard-list"></i> ${menuName}
     `;
     
-    // Reload data for new menu
-    loadData();
+    // Reset all grids
+    resetAllGrids();
 }
 
 /**
- * Setup event listeners
+ * Initialize filter dropdowns
  */
-function setupEventListeners() {
-    // Check all checkbox
-    const checkAll = document.getElementById('checkAll');
-    if (checkAll) {
-        checkAll.addEventListener('change', (e) => {
-            const checkboxes = document.querySelectorAll('#tableBody input[type="checkbox"]');
-            checkboxes.forEach(cb => {
-                cb.checked = e.target.checked;
-                const itemId = cb.dataset.id;
-                if (e.target.checked) {
-                    selectedItems.add(itemId);
-                } else {
-                    selectedItems.delete(itemId);
-                }
-            });
-        });
-    }
-}
-
-/**
- * Load work centers
- */
-async function loadWorkCenters() {
+async function initFilters() {
     try {
-        const response = await axios.get(`${API_BASE}/workcenter/list`);
-        if (response.data.success) {
-            const select = document.getElementById('workCenterSelect');
-            const options = response.data.data.map(wc => 
-                `<option value="${wc.code}">${wc.name}</option>`
-            ).join('');
-            select.innerHTML = '<option value="">전체</option>' + options;
+        // Load plants
+        const plantResponse = await axios.get(`${API_BASE}/filter/plants`);
+        if (plantResponse.data.success) {
+            populateSelect('plantSelect', plantResponse.data.data, 'code', 'name');
         }
-    } catch (error) {
-        console.error('Error loading work centers:', error);
-        // Use mock data if API fails
-        console.log('Using mock work centers data');
-    }
-}
-
-/**
- * Load production data
- */
-async function loadData() {
-    const workCenter = document.getElementById('workCenterSelect')?.value || '';
-    const filter = document.getElementById('filterSelect')?.value || 'ALL';
-    
-    try {
-        const response = await axios.get(`${API_BASE}/production/list`, {
-            params: { workCenter, filter }
-        });
         
-        if (response.data.success) {
-            currentData = response.data.data;
-            renderTable(currentData);
+        // Load models
+        const modelResponse = await axios.get(`${API_BASE}/filter/models`);
+        if (modelResponse.data.success) {
+            populateSelect('modelSelect', modelResponse.data.data, 'code', 'name');
+        }
+        
+        // Load work centers
+        const wcResponse = await axios.get(`${API_BASE}/filter/workcenters`);
+        if (wcResponse.data.success) {
+            populateSelect('workCenterSelect', wcResponse.data.data, 'code', 'name');
+        }
+        
+        // Load processes
+        const processResponse = await axios.get(`${API_BASE}/filter/processes`);
+        if (processResponse.data.success) {
+            populateSelect('processSelect', processResponse.data.data, 'code', 'name');
         }
     } catch (error) {
-        console.error('Error loading data:', error);
-        // Use mock data if API fails
-        useMockData();
+        console.error('Error loading filters:', error);
+        // Use mock data
+        populateSelect('plantSelect', [
+            { code: 'P001', name: '1공장' },
+            { code: 'P002', name: '2공장' }
+        ], 'code', 'name');
+        
+        populateSelect('modelSelect', [
+            { code: 'CP619', name: 'CP619Z1' },
+            { code: 'CP865', name: 'CP865921' }
+        ], 'code', 'name');
+        
+        populateSelect('workCenterSelect', [
+            { code: 'WC001', name: '작업센터1' },
+            { code: 'WC002', name: '작업센터2' }
+        ], 'code', 'name');
+        
+        populateSelect('processSelect', [
+            { code: 'PR001', name: '공정1' },
+            { code: 'PR002', name: '공정2' }
+        ], 'code', 'name');
     }
 }
 
 /**
- * Use mock data for development
+ * Populate select element
  */
-function useMockData() {
-    console.log('Using mock data');
-    currentData = [
-        { id: 1, modelName: 'CP619Z1', processCode: 'CPBP90066', unit: 'EA', quantity: 1340, status: 'normal', workCenter: 'WC001', startTime: '2026-01-18 09:00' },
-        { id: 2, modelName: 'CP865921M8AB', processCode: 'CP865921', unit: 'EA', quantity: 1393, status: 'normal', workCenter: 'WC001', startTime: '2026-01-18 09:15' },
-        { id: 3, modelName: 'CP823921M6AB', processCode: 'CP823921', unit: 'EA', quantity: 1244, status: 'warning', workCenter: 'WC002', startTime: '2026-01-18 09:30' },
-        { id: 4, modelName: 'CP996921M6AB', processCode: 'CP965A27', unit: 'EA', quantity: 1680, status: 'normal', workCenter: 'WC001', startTime: '2026-01-18 10:00' },
-        { id: 5, modelName: 'CP962921M6AB', processCode: 'CP662CN', unit: 'EA', quantity: 923, status: 'normal', workCenter: 'WC003', startTime: '2026-01-18 10:15' },
-        { id: 6, modelName: 'CP963921QABGN', processCode: 'CP962CN', unit: 'EA', quantity: 1320, status: 'error', workCenter: 'WC002', startTime: '2026-01-18 10:30' }
-    ];
-    renderTable(currentData);
+function populateSelect(elementId, data, valueField, textField) {
+    const select = document.getElementById(elementId);
+    if (!select) return;
+    
+    const currentValue = select.value;
+    const options = data.map(item => 
+        `<option value="${item[valueField]}">${item[textField]}</option>`
+    ).join('');
+    
+    select.innerHTML = '<option value="">선택</option>' + options;
+    select.value = currentValue;
 }
 
 /**
- * Render data table
+ * Set default dates (today)
  */
-function renderTable(data) {
-    const tbody = document.getElementById('tableBody');
+function setDefaultDates() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = today;
+    document.getElementById('endDate').value = today;
+}
+
+/**
+ * Load all work areas
+ */
+async function loadAllWorkAreas() {
+    const plant = document.getElementById('plantSelect').value;
     
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="loading">데이터가 없습니다.</td></tr>';
+    if (!plant) {
+        alert('생산사업장을 선택해주세요.');
         return;
     }
     
-    tbody.innerHTML = data.map((item, index) => `
-        <tr class="status-${item.status || 'normal'}">
-            <td><input type="checkbox" data-id="${item.id}" onchange="toggleSelect('${item.id}')"></td>
-            <td>${index + 1}</td>
-            <td>${item.modelName || '-'}</td>
-            <td>${item.processCode || '-'}</td>
-            <td>${item.unit || '-'}</td>
-            <td>${item.quantity || 0}</td>
-            <td>
-                ${item.status === 'normal' ? '<span style="color: #2ecc71;">●</span> 정상' : ''}
-                ${item.status === 'warning' ? '<span style="color: #f39c12;">●</span> 경고' : ''}
-                ${item.status === 'error' ? '<span style="color: #e74c3c;">●</span> 오류' : ''}
-            </td>
-            <td>${item.workCenter || '-'}</td>
-            <td>${item.startTime || '-'}</td>
+    try {
+        const response = await axios.get(`${API_BASE}/work-area/list`, {
+            params: { plant }
+        });
+        
+        if (response.data.success) {
+            renderWorkAreas(response.data.data);
+        }
+    } catch (error) {
+        console.error('Error loading work areas:', error);
+        // Use mock data
+        renderWorkAreas([
+            { code: 'WA001', name: '작업구역1' },
+            { code: 'WA002', name: '작업구역2' },
+            { code: 'WA003', name: '작업구역3' },
+            { code: 'WA004', name: '작업구역4' }
+        ]);
+    }
+}
+
+/**
+ * Render work areas
+ */
+function renderWorkAreas(data) {
+    const tbody = document.getElementById('workAreaTable');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" class="empty-state">데이터가 없습니다</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => `
+        <tr class="clickable" onclick="selectWorkArea('${item.code}')">
+            <td>${item.code}</td>
+            <td>${item.name}</td>
         </tr>
     `).join('');
 }
 
 /**
- * Toggle item selection
+ * Select work area
  */
-function toggleSelect(itemId) {
-    if (selectedItems.has(itemId)) {
-        selectedItems.delete(itemId);
+async function selectWorkArea(code) {
+    selectedWorkArea = code;
+    
+    // Highlight selected row
+    document.querySelectorAll('#workAreaTable tr').forEach(tr => tr.classList.remove('selected'));
+    event.target.closest('tr').classList.add('selected');
+    
+    // Load production plans for selected work area
+    await loadProductionPlans(code);
+    
+    // Clear other grids
+    clearGrid('processWorkTable', 4, '생산계획을 선택하세요');
+    clearGrid('processFlowTable', 3, '생산계획을 선택하세요');
+    clearGrid('workProgressTable', 7, '공정작업을 선택하세요');
+    
+    updateButtonStates();
+}
+
+/**
+ * Load production plans
+ */
+async function loadProductionPlans(workAreaCode) {
+    try {
+        const response = await axios.get(`${API_BASE}/production-plan/list`, {
+            params: {
+                workArea: workAreaCode,
+                model: document.getElementById('modelSelect').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value
+            }
+        });
+        
+        if (response.data.success) {
+            renderProductionPlans(response.data.data);
+        }
+    } catch (error) {
+        console.error('Error loading production plans:', error);
+        // Use mock data
+        renderProductionPlans([
+            { id: 1, model: 'CP619Z1', machine: '001', planDate: '2026-01-18', quantity: 100, status: 'running' },
+            { id: 2, model: 'CP865921', machine: '002', planDate: '2026-01-18', quantity: 150, status: 'waiting' },
+            { id: 3, model: 'CP823921', machine: '003', planDate: '2026-01-18', quantity: 120, status: 'completed' }
+        ]);
+    }
+}
+
+/**
+ * Render production plans
+ */
+function renderProductionPlans(data) {
+    const tbody = document.getElementById('productionPlanTable');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">데이터가 없습니다</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => `
+        <tr class="clickable status-${item.status}" onclick="selectProductionPlan(${item.id})">
+            <td>${item.model}</td>
+            <td>${item.machine}</td>
+            <td>${item.planDate}</td>
+            <td>${item.quantity}</td>
+            <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Select production plan
+ */
+async function selectProductionPlan(planId) {
+    selectedProductionPlan = planId;
+    
+    // Highlight selected row
+    document.querySelectorAll('#productionPlanTable tr').forEach(tr => tr.classList.remove('selected'));
+    event.target.closest('tr').classList.add('selected');
+    
+    // Load process works and process flow
+    await Promise.all([
+        loadProcessWorks(planId),
+        loadProcessFlow(planId)
+    ]);
+    
+    // Clear work progress
+    clearGrid('workProgressTable', 7, '공정작업을 선택하세요');
+    
+    updateButtonStates();
+}
+
+/**
+ * Load process works
+ */
+async function loadProcessWorks(planId) {
+    try {
+        const response = await axios.get(`${API_BASE}/process-work/list`, {
+            params: { planId }
+        });
+        
+        if (response.data.success) {
+            renderProcessWorks(response.data.data);
+        }
+    } catch (error) {
+        console.error('Error loading process works:', error);
+        // Use mock data
+        renderProcessWorks([
+            { id: 1, code: 'PR001', name: '전처리', sequence: 1, status: 'completed' },
+            { id: 2, code: 'PR002', name: '가공', sequence: 2, status: 'running' },
+            { id: 3, code: 'PR003', name: '조립', sequence: 3, status: 'waiting' },
+            { id: 4, code: 'PR004', name: '검사', sequence: 4, status: 'waiting' }
+        ]);
+    }
+}
+
+/**
+ * Render process works
+ */
+function renderProcessWorks(data) {
+    const tbody = document.getElementById('processWorkTable');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">데이터가 없습니다</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => `
+        <tr class="clickable status-${item.status}" onclick="selectProcessWork(${item.id})">
+            <td>${item.code}</td>
+            <td>${item.name}</td>
+            <td>${item.sequence}</td>
+            <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Load process flow
+ */
+async function loadProcessFlow(planId) {
+    try {
+        const response = await axios.get(`${API_BASE}/process-flow/list`, {
+            params: { planId }
+        });
+        
+        if (response.data.success) {
+            renderProcessFlow(response.data.data);
+        }
+    } catch (error) {
+        console.error('Error loading process flow:', error);
+        // Use mock data
+        renderProcessFlow([
+            { sequence: 1, name: '전처리', status: 'completed' },
+            { sequence: 2, name: '가공', status: 'running' },
+            { sequence: 3, name: '조립', status: 'waiting' },
+            { sequence: 4, name: '검사', status: 'waiting' },
+            { sequence: 5, name: '포장', status: 'waiting' }
+        ]);
+    }
+}
+
+/**
+ * Render process flow
+ */
+function renderProcessFlow(data) {
+    const tbody = document.getElementById('processFlowTable');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-state">데이터가 없습니다</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => `
+        <tr class="status-${item.status}">
+            <td>${item.sequence}</td>
+            <td>${item.name}</td>
+            <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Select process work
+ */
+async function selectProcessWork(workId) {
+    selectedProcessWork = workId;
+    
+    // Highlight selected row
+    document.querySelectorAll('#processWorkTable tr').forEach(tr => tr.classList.remove('selected'));
+    event.target.closest('tr').classList.add('selected');
+    
+    // Load work progress
+    await loadWorkProgress(workId);
+    
+    updateButtonStates();
+}
+
+/**
+ * Load work progress
+ */
+async function loadWorkProgress(workId) {
+    try {
+        const response = await axios.get(`${API_BASE}/work-progress/list`, {
+            params: { workId }
+        });
+        
+        if (response.data.success) {
+            renderWorkProgress(response.data.data);
+        }
+    } catch (error) {
+        console.error('Error loading work progress:', error);
+        // Use mock data
+        renderWorkProgress([
+            { id: 1, workId: 'W001', processName: '가공', worker: '홍길동', startTime: '2026-01-18 09:00:00', elapsed: '02:35:00', quantity: 45, status: 'running' },
+            { id: 2, workId: 'W002', processName: '가공', worker: '김철수', startTime: '2026-01-18 09:30:00', elapsed: '02:05:00', quantity: 38, status: 'running' }
+        ]);
+    }
+}
+
+/**
+ * Render work progress
+ */
+function renderWorkProgress(data) {
+    const tbody = document.getElementById('workProgressTable');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">진행중인 작업이 없습니다</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => `
+        <tr class="status-${item.status}">
+            <td>${item.workId}</td>
+            <td>${item.processName}</td>
+            <td>${item.worker}</td>
+            <td>${item.startTime}</td>
+            <td>${item.elapsed}</td>
+            <td>${item.quantity}</td>
+            <td><span class="status-badge ${item.status}">${getStatusText(item.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Load workers
+ */
+async function loadWorkers() {
+    try {
+        const response = await axios.get(`${API_BASE}/worker/list`);
+        
+        if (response.data.success) {
+            renderWorkers(response.data.data);
+        }
+    } catch (error) {
+        console.error('Error loading workers:', error);
+        // Use mock data
+        renderWorkers([
+            { id: 1, empNo: 'E001', name: '홍길동' },
+            { id: 2, empNo: 'E002', name: '김철수' },
+            { id: 3, empNo: 'E003', name: '이영희' },
+            { id: 4, empNo: 'E004', name: '박민수' }
+        ]);
+    }
+}
+
+/**
+ * Render workers
+ */
+function renderWorkers(data) {
+    const tbody = document.getElementById('workerTable');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-state">작업자가 없습니다</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => `
+        <tr>
+            <td><input type="checkbox" onchange="toggleWorker(${item.id})"></td>
+            <td>${item.empNo}</td>
+            <td>${item.name}</td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Toggle worker selection
+ */
+function toggleWorker(workerId) {
+    if (selectedWorkers.includes(workerId)) {
+        selectedWorkers = selectedWorkers.filter(id => id !== workerId);
     } else {
-        selectedItems.add(itemId);
+        selectedWorkers.push(workerId);
     }
-    console.log('Selected items:', Array.from(selectedItems));
+    updateButtonStates();
 }
 
 /**
- * Load bench status
+ * Get status text
  */
-async function loadBenchStatus() {
-    try {
-        const response = await axios.get(`${API_BASE}/status/bench`);
-        if (response.data.success) {
-            renderBenchStatus(response.data.data);
-        }
-    } catch (error) {
-        console.error('Error loading bench status:', error);
-        // Use mock data
-        renderBenchStatus([
-            { name: 'CP_DP 메인조립', count: 5 },
-            { name: 'CP_DP 사상화', count: 3 }
-        ]);
-    }
-}
-
-/**
- * Render bench status
- */
-function renderBenchStatus(data) {
-    const container = document.getElementById('benchStatus');
-    if (!data || data.length === 0) {
-        container.innerHTML = '<div class="loading">데이터 없음</div>';
-        return;
-    }
-    
-    container.innerHTML = data.map(item => `
-        <div class="status-item">
-            <i class="fas fa-check-circle" style="color: #2ecc71;"></i>
-            ${item.name || item.text} ${item.count ? `(${item.count})` : ''}
-        </div>
-    `).join('');
-}
-
-/**
- * Load exception status
- */
-async function loadExceptionStatus() {
-    try {
-        const response = await axios.get(`${API_BASE}/status/exception`);
-        if (response.data.success) {
-            renderExceptionStatus(response.data.data);
-        }
-    } catch (error) {
-        console.error('Error loading exception status:', error);
-        // Use mock data
-        renderExceptionStatus([
-            { name: 'CP_DP 4 5 6차', count: 2 },
-            { name: 'CP_DP 사상내열', count: 1 }
-        ]);
-    }
-}
-
-/**
- * Render exception status
- */
-function renderExceptionStatus(data) {
-    const container = document.getElementById('exceptionStatus');
-    if (!data || data.length === 0) {
-        container.innerHTML = '<div class="loading">데이터 없음</div>';
-        return;
-    }
-    
-    container.innerHTML = data.map(item => `
-        <div class="status-item exception">
-            <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
-            ${item.name || item.text} ${item.count ? `(${item.count})` : ''}
-        </div>
-    `).join('');
-}
-
-/**
- * Handle action buttons
- */
-async function handleAction(action) {
-    if (selectedItems.size === 0) {
-        alert('항목을 선택해주세요.');
-        return;
-    }
-    
-    const actionNames = {
-        start: '시작',
-        stop: '종료',
-        resolve: '공정이상해제',
-        material: '원재료확인'
+function getStatusText(status) {
+    const statusMap = {
+        'running': '진행중',
+        'waiting': '대기',
+        'completed': '완료',
+        'error': '오류'
     };
+    return statusMap[status] || status;
+}
+
+/**
+ * Update button states
+ */
+function updateButtonStates() {
+    const btnStart = document.getElementById('btnStart');
+    const btnEnd = document.getElementById('btnEnd');
+    const btnResolve = document.getElementById('btnResolve');
     
-    const confirmed = confirm(`선택한 ${selectedItems.size}개 항목을 ${actionNames[action]}하시겠습니까?`);
+    // Start button: enabled when process work is selected and workers are selected
+    btnStart.disabled = !(selectedProcessWork && selectedWorkers.length > 0);
+    
+    // End button: enabled when process work is selected
+    btnEnd.disabled = !selectedProcessWork;
+    
+    // Resolve button: enabled when process work is selected
+    btnResolve.disabled = !selectedProcessWork;
+}
+
+/**
+ * Handle start action
+ */
+async function handleStart() {
+    if (!selectedProcessWork || selectedWorkers.length === 0) {
+        alert('공정작업과 작업자를 선택해주세요.');
+        return;
+    }
+    
+    const confirmed = confirm(`선택한 작업을 시작하시겠습니까?\n작업자: ${selectedWorkers.length}명`);
     if (!confirmed) return;
     
     try {
-        let endpoint = '';
-        switch (action) {
-            case 'start':
-                endpoint = '/production/start';
-                break;
-            case 'stop':
-                endpoint = '/production/complete';
-                break;
-            case 'resolve':
-                endpoint = '/production/resolve';
-                break;
-            case 'material':
-                endpoint = '/production/material-check';
-                break;
-        }
-        
-        // Send request for each selected item
-        const promises = Array.from(selectedItems).map(itemId => {
-            const item = currentData.find(d => d.id == itemId);
-            return axios.post(`${API_BASE}${endpoint}`, {
-                itemId: itemId,
-                workCenter: item?.workCenter,
-                quantity: item?.quantity
-            });
+        const response = await axios.post(`${API_BASE}/work/start`, {
+            processWorkId: selectedProcessWork,
+            workers: selectedWorkers
         });
         
-        await Promise.all(promises);
-        
-        alert(`${actionNames[action]} 작업이 완료되었습니다.`);
-        
-        // Clear selection and reload data
-        selectedItems.clear();
-        document.getElementById('checkAll').checked = false;
-        loadData();
-        
+        if (response.data.success) {
+            alert('작업이 시작되었습니다.');
+            // Reload work progress
+            await loadWorkProgress(selectedProcessWork);
+        }
     } catch (error) {
-        console.error(`Error in ${action} action:`, error);
-        alert(`작업 중 오류가 발생했습니다: ${error.message}`);
+        console.error('Error starting work:', error);
+        alert('작업 시작 중 오류가 발생했습니다.');
     }
+}
+
+/**
+ * Handle end action
+ */
+async function handleEnd() {
+    if (!selectedProcessWork) {
+        alert('공정작업을 선택해주세요.');
+        return;
+    }
+    
+    const confirmed = confirm('선택한 작업을 종료하시겠습니까?');
+    if (!confirmed) return;
+    
+    try {
+        const response = await axios.post(`${API_BASE}/work/end`, {
+            processWorkId: selectedProcessWork
+        });
+        
+        if (response.data.success) {
+            alert('작업이 종료되었습니다.');
+            // Reload data
+            await loadWorkProgress(selectedProcessWork);
+            if (selectedProductionPlan) {
+                await loadProcessWorks(selectedProductionPlan);
+            }
+        }
+    } catch (error) {
+        console.error('Error ending work:', error);
+        alert('작업 종료 중 오류가 발생했습니다.');
+    }
+}
+
+/**
+ * Handle resolve action
+ */
+async function handleResolve() {
+    if (!selectedProcessWork) {
+        alert('공정작업을 선택해주세요.');
+        return;
+    }
+    
+    const confirmed = confirm('공정이상을 해제하시겠습니까?');
+    if (!confirmed) return;
+    
+    try {
+        const response = await axios.post(`${API_BASE}/work/resolve`, {
+            processWorkId: selectedProcessWork
+        });
+        
+        if (response.data.success) {
+            alert('공정이상이 해제되었습니다.');
+            // Reload data
+            if (selectedProductionPlan) {
+                await loadProcessWorks(selectedProductionPlan);
+            }
+        }
+    } catch (error) {
+        console.error('Error resolving issue:', error);
+        alert('공정이상 해제 중 오류가 발생했습니다.');
+    }
+}
+
+/**
+ * Clear grid
+ */
+function clearGrid(tableId, colspan, message) {
+    const tbody = document.getElementById(tableId);
+    tbody.innerHTML = `<tr><td colspan="${colspan}" class="empty-state">${message}</td></tr>`;
+}
+
+/**
+ * Reset all grids
+ */
+function resetAllGrids() {
+    selectedWorkArea = null;
+    selectedProductionPlan = null;
+    selectedProcessWork = null;
+    selectedWorkers = [];
+    
+    clearGrid('workAreaTable', 2, '전체작업구역 조회를 클릭하세요');
+    clearGrid('productionPlanTable', 5, '작업구역을 선택하세요');
+    clearGrid('processWorkTable', 4, '생산계획을 선택하세요');
+    clearGrid('processFlowTable', 3, '생산계획을 선택하세요');
+    clearGrid('workProgressTable', 7, '공정작업을 선택하세요');
+    
+    updateButtonStates();
 }
 
 console.log('app.js loaded successfully');

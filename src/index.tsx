@@ -27,80 +27,169 @@ app.get('/', (c) => {
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Malgun Gothic', sans-serif; }
+        body { font-family: 'Malgun Gothic', sans-serif; overflow: hidden; }
         
         /* Layout */
         .app-container { display: flex; height: 100vh; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; overflow-y: auto; }
-        .main-content { flex: 1; display: flex; flex-direction: column; }
-        .right-panel { width: 300px; background: #ecf0f1; border-left: 2px solid #bdc3c7; overflow-y: auto; }
+        .sidebar { width: 220px; background: #2c3e50; color: white; overflow-y: auto; flex-shrink: 0; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         
         /* Sidebar Navigation */
         .nav-item {
-            padding: 12px 20px;
+            padding: 12px 16px;
             cursor: pointer;
             border-left: 3px solid transparent;
             transition: all 0.2s;
+            font-size: 13px;
         }
         .nav-item:hover { background: #34495e; border-left-color: #3498db; }
         .nav-item.active { background: #34495e; border-left-color: #3498db; }
-        .nav-item i { margin-right: 8px; }
+        .nav-item i { margin-right: 8px; width: 16px; }
         
         /* Header */
         .header {
             background: white;
-            padding: 15px 20px;
+            padding: 12px 20px;
             border-bottom: 2px solid #e0e0e0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
         
         /* Filter Section */
         .filter-section {
             background: #f8f9fa;
             padding: 15px 20px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 2px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .filter-row:last-child { margin-bottom: 0; }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-item label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+        
+        /* Grid Container - 5개 그리드 레이아웃 */
+        .grid-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 200px 1fr 1fr 250px;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            overflow: hidden;
+        }
+        
+        /* Grid 1: 작업구역 (좌측 전체) */
+        .grid-work-area {
+            grid-column: 1;
+            grid-row: 1 / 3;
+        }
+        
+        /* Grid 2: 생산계획 데이터 (중앙 상단) */
+        .grid-production-plan {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        
+        /* Grid 3: 공정작업 데이터 (중앙 하단) */
+        .grid-process-work {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        
+        /* Grid 4: 공정흐름 (우측 상단) */
+        .grid-process-flow {
+            grid-column: 3;
+            grid-row: 1;
+        }
+        
+        /* Grid 5: 작업자 선택 (우측 상단) */
+        .grid-worker {
+            grid-column: 4;
+            grid-row: 1;
+        }
+        
+        /* Grid 6: 작업진행정보 (우측 하단) */
+        .grid-work-progress {
+            grid-column: 3 / 5;
+            grid-row: 2;
+        }
+        
+        /* Grid Box Styling */
+        .grid-box {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .grid-header {
+            background: #3498db;
+            color: white;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 13px;
+            border-bottom: 2px solid #2980b9;
+            flex-shrink: 0;
+        }
+        .grid-body {
+            flex: 1;
+            overflow: auto;
         }
         
         /* Table */
-        .table-container {
-            flex: 1;
-            overflow: auto;
-            padding: 20px;
-        }
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 12px;
         }
         th {
-            background: #3498db;
-            color: white;
-            padding: 12px;
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 8px;
             text-align: left;
             font-weight: 600;
+            border-bottom: 2px solid #bdc3c7;
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 5;
         }
         td {
-            padding: 10px 12px;
+            padding: 6px 8px;
             border-bottom: 1px solid #e0e0e0;
         }
         tr:hover { background: #f8f9fa; }
-        tr.status-normal { background: #e8f4fd; }
-        tr.status-warning { background: #fff3cd; }
+        tr.selected { background: #d4e9ff; }
+        tr.status-running { background: #d5f4e6; }
+        tr.status-waiting { background: #fff3cd; }
         tr.status-error { background: #f8d7da; }
+        tr.clickable { cursor: pointer; }
         
         /* Buttons */
         .btn-group {
             background: white;
-            padding: 15px 20px;
+            padding: 12px 20px;
             border-top: 2px solid #e0e0e0;
             display: flex;
             gap: 10px;
+            flex-shrink: 0;
         }
         .btn {
             padding: 10px 20px;
@@ -108,62 +197,63 @@ app.get('/', (c) => {
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 13px;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .btn-primary { background: #3498db; color: white; }
-        .btn-primary:hover { background: #2980b9; }
+        .btn-primary:hover:not(:disabled) { background: #2980b9; }
         .btn-success { background: #2ecc71; color: white; }
-        .btn-success:hover { background: #27ae60; }
+        .btn-success:hover:not(:disabled) { background: #27ae60; }
         .btn-danger { background: #e74c3c; color: white; }
-        .btn-danger:hover { background: #c0392b; }
+        .btn-danger:hover:not(:disabled) { background: #c0392b; }
         .btn-warning { background: #f39c12; color: white; }
-        .btn-warning:hover { background: #e67e22; }
+        .btn-warning:hover:not(:disabled) { background: #e67e22; }
         
-        /* Right Panel */
-        .panel-section {
-            padding: 15px;
-            margin: 10px;
-            background: white;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .panel-title {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #3498db;
-        }
-        .status-item {
-            padding: 8px;
-            margin: 5px 0;
-            background: #f8f9fa;
-            border-left: 3px solid #3498db;
-            border-radius: 2px;
-        }
-        .status-item.exception { border-left-color: #e74c3c; }
-        
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
-        }
-        
-        /* Select */
-        select, input {
-            padding: 8px 12px;
+        /* Form Elements */
+        select, input[type="text"], input[type="date"] {
+            padding: 6px 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
+            background: white;
         }
+        select { min-width: 120px; }
+        input[type="date"] { width: 130px; }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #7f8c8d;
+            font-size: 13px;
+        }
+        
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-badge.running { background: #d5f4e6; color: #27ae60; }
+        .status-badge.waiting { background: #fff3cd; color: #f39c12; }
+        .status-badge.completed { background: #d4e9ff; color: #3498db; }
+        .status-badge.error { background: #f8d7da; color: #e74c3c; }
     </style>
 </head>
 <body>
     <div class="app-container">
         <!-- Left Sidebar -->
         <div class="sidebar">
-            <div style="padding: 20px; background: #1a252f; font-size: 18px; font-weight: 600;">
+            <div style="padding: 16px; background: #1a252f; font-size: 16px; font-weight: 600; border-bottom: 1px solid #34495e;">
                 <i class="fas fa-industry"></i> 생산관리
             </div>
             <div id="nav-menu"></div>
@@ -173,11 +263,11 @@ app.get('/', (c) => {
         <div class="main-content">
             <!-- Header -->
             <div class="header">
-                <h1 style="font-size: 20px; color: #2c3e50;">
+                <h1 style="font-size: 18px; color: #2c3e50; font-weight: 600;">
                     <i class="fas fa-clipboard-list"></i>
                     CP_DP 트라이얼파일조리
                 </h1>
-                <div style="color: #7f8c8d;">
+                <div style="color: #7f8c8d; font-size: 13px;">
                     <i class="far fa-clock"></i>
                     <span id="current-time"></span>
                 </div>
@@ -185,87 +275,221 @@ app.get('/', (c) => {
             
             <!-- Filter Section -->
             <div class="filter-section">
-                <div style="display: flex; gap: 15px; align-items: center;">
-                    <label>작업장:</label>
-                    <select id="workCenterSelect" style="width: 200px;">
-                        <option value="">전체</option>
-                    </select>
-                    
-                    <label>필터:</label>
-                    <select id="filterSelect" style="width: 150px;">
-                        <option value="ALL">전체</option>
-                        <option value="NORMAL">정상</option>
-                        <option value="WARNING">경고</option>
-                        <option value="ERROR">오류</option>
-                    </select>
-                    
-                    <button class="btn btn-primary" onclick="loadData()">
-                        <i class="fas fa-sync-alt"></i> 조회
+                <div class="filter-row">
+                    <button class="btn btn-primary" onclick="loadAllWorkAreas()">
+                        <i class="fas fa-search"></i> 전체작업구역 조회
                     </button>
+                    
+                    <div class="filter-item">
+                        <label>생산사업장:</label>
+                        <select id="plantSelect">
+                            <option value="">선택</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label>기종:</label>
+                        <select id="modelSelect">
+                            <option value="">선택</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label>워크센터:</label>
+                        <select id="workCenterSelect">
+                            <option value="">선택</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label>공정:</label>
+                        <select id="processSelect">
+                            <option value="">선택</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label>생산계획시작일:</label>
+                        <input type="date" id="startDate">
+                        <span>~</span>
+                        <input type="date" id="endDate">
+                    </div>
                 </div>
             </div>
             
-            <!-- Table -->
-            <div class="table-container">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th width="40"><input type="checkbox" id="checkAll"></th>
-                            <th width="60">No</th>
-                            <th>모델명</th>
-                            <th>공정코드</th>
-                            <th>단위</th>
-                            <th>수량</th>
-                            <th>상태</th>
-                            <th>작업장</th>
-                            <th>시작시간</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="9" class="loading">
-                                <i class="fas fa-spinner fa-spin"></i> 데이터를 불러오는 중...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Grid Container (5개 그리드) -->
+            <div class="grid-container">
+                <!-- Grid 1: 작업구역 -->
+                <div class="grid-box grid-work-area">
+                    <div class="grid-header">
+                        <i class="fas fa-map-marker-alt"></i> 작업구역
+                    </div>
+                    <div class="grid-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>구역코드</th>
+                                    <th>구역명</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workAreaTable">
+                                <tr>
+                                    <td colspan="2" class="empty-state">
+                                        <i class="fas fa-info-circle"></i><br>
+                                        전체작업구역 조회를 클릭하세요
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Grid 2: 생산계획 데이터 -->
+                <div class="grid-box grid-production-plan">
+                    <div class="grid-header">
+                        <i class="fas fa-calendar-alt"></i> 생산계획
+                    </div>
+                    <div class="grid-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>기종</th>
+                                    <th>호기</th>
+                                    <th>계획일</th>
+                                    <th>수량</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productionPlanTable">
+                                <tr>
+                                    <td colspan="5" class="empty-state">
+                                        작업구역을 선택하세요
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Grid 3: 공정작업 데이터 -->
+                <div class="grid-box grid-process-work">
+                    <div class="grid-header">
+                        <i class="fas fa-tasks"></i> 공정작업
+                    </div>
+                    <div class="grid-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>공정코드</th>
+                                    <th>공정명</th>
+                                    <th>작업순서</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="processWorkTable">
+                                <tr>
+                                    <td colspan="4" class="empty-state">
+                                        생산계획을 선택하세요
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Grid 4: 공정흐름 -->
+                <div class="grid-box grid-process-flow">
+                    <div class="grid-header">
+                        <i class="fas fa-project-diagram"></i> 공정흐름
+                    </div>
+                    <div class="grid-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>순서</th>
+                                    <th>공정명</th>
+                                    <th>진행상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="processFlowTable">
+                                <tr>
+                                    <td colspan="3" class="empty-state">
+                                        생산계획을 선택하세요
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Grid 5: 작업자 선택 -->
+                <div class="grid-box grid-worker">
+                    <div class="grid-header">
+                        <i class="fas fa-user-hard-hat"></i> 작업자
+                    </div>
+                    <div class="grid-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th width="40">선택</th>
+                                    <th>사번</th>
+                                    <th>이름</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workerTable">
+                                <tr>
+                                    <td colspan="3" class="empty-state">
+                                        작업자 목록
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Grid 6: 작업진행정보 -->
+                <div class="grid-box grid-work-progress">
+                    <div class="grid-header">
+                        <i class="fas fa-chart-line"></i> 작업진행정보
+                    </div>
+                    <div class="grid-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>작업ID</th>
+                                    <th>공정명</th>
+                                    <th>작업자</th>
+                                    <th>시작시간</th>
+                                    <th>경과시간</th>
+                                    <th>진행수량</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workProgressTable">
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        공정작업을 선택하세요
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             
             <!-- Button Group -->
             <div class="btn-group">
-                <button class="btn btn-success" onclick="handleAction('start')">
+                <button class="btn btn-success" id="btnStart" onclick="handleStart()" disabled>
                     <i class="fas fa-play"></i> 시작
                 </button>
-                <button class="btn btn-danger" onclick="handleAction('stop')">
+                <button class="btn btn-danger" id="btnEnd" onclick="handleEnd()" disabled>
                     <i class="fas fa-stop"></i> 종료
                 </button>
-                <button class="btn btn-warning" onclick="handleAction('resolve')">
+                <button class="btn btn-warning" id="btnResolve" onclick="handleResolve()" disabled>
                     <i class="fas fa-wrench"></i> 공정이상해제
                 </button>
-                <button class="btn btn-primary" onclick="handleAction('material')">
-                    <i class="fas fa-boxes"></i> 원재료확인
-                </button>
-            </div>
-        </div>
-        
-        <!-- Right Panel -->
-        <div class="right-panel">
-            <div class="panel-section">
-                <div class="panel-title">
-                    <i class="fas fa-check-circle"></i> 벤치확인
-                </div>
-                <div id="benchStatus">
-                    <div class="loading">데이터 없음</div>
-                </div>
-            </div>
-            
-            <div class="panel-section">
-                <div class="panel-title">
-                    <i class="fas fa-exclamation-triangle"></i> 예외확인
-                </div>
-                <div id="exceptionStatus">
-                    <div class="loading">데이터 없음</div>
-                </div>
             </div>
         </div>
     </div>
